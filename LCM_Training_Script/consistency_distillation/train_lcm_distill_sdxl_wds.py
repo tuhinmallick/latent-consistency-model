@@ -115,8 +115,7 @@ def tarfile_to_samples_nothrow(src, handler=wds.warn_and_continue):
     # NOTE this is a re-impl of the webdataset impl with group_by_keys that doesn't throw
     streams = url_opener(src, handler=handler)
     files = tar_file_expander(streams, handler=handler)
-    samples = group_by_keys_nothrow(files, handler=handler)
-    return samples
+    return group_by_keys_nothrow(files, handler=handler)
 
 
 class WebdatasetFilter:
@@ -259,7 +258,7 @@ def log_validation(vae, unet, args, accelerator, weight_dtype, step, name="targe
 
     image_logs = []
 
-    for _, prompt in enumerate(validation_prompts):
+    for prompt in validation_prompts:
         images = []
         with torch.autocast("cuda"):
             images = pipeline(
@@ -275,10 +274,7 @@ def log_validation(vae, unet, args, accelerator, weight_dtype, step, name="targe
             for log in image_logs:
                 images = log["images"]
                 validation_prompt = log["validation_prompt"]
-                formatted_images = []
-                for image in images:
-                    formatted_images.append(np.asarray(image))
-
+                formatted_images = [np.asarray(image) for image in images]
                 formatted_images = np.stack(formatted_images)
 
                 tracker.writer.add_images(validation_prompt, formatted_images, step, dataformats="NHWC")
@@ -406,8 +402,7 @@ class DDIMSolver:
     def ddim_step(self, pred_x0, pred_noise, timestep_index):
         alpha_cumprod_prev = extract_into_tensor(self.ddim_alpha_cumprods_prev, timestep_index, pred_x0.shape)
         dir_xt = (1.0 - alpha_cumprod_prev).sqrt() * pred_noise
-        x_prev = alpha_cumprod_prev.sqrt() * pred_x0 + dir_xt
-        return x_prev
+        return alpha_cumprod_prev.sqrt() * pred_x0 + dir_xt
 
 
 def import_model_class_from_model_name_or_path(
@@ -750,7 +745,7 @@ def parse_args():
 
     args = parser.parse_args()
     env_local_rank = int(os.environ.get("LOCAL_RANK", -1))
-    if env_local_rank != -1 and env_local_rank != args.local_rank:
+    if env_local_rank not in [-1, args.local_rank]:
         args.local_rank = env_local_rank
 
     if args.proportion_empty_prompts < 0 or args.proportion_empty_prompts > 1:
@@ -1356,7 +1351,7 @@ def main(args):
                             # before we save the new checkpoint, we need to have at _most_ `checkpoints_total_limit - 1` checkpoints
                             if len(checkpoints) >= args.checkpoints_total_limit:
                                 num_to_remove = len(checkpoints) - args.checkpoints_total_limit + 1
-                                removing_checkpoints = checkpoints[0:num_to_remove]
+                                removing_checkpoints = checkpoints[:num_to_remove]
 
                                 logger.info(
                                     f"{len(checkpoints)} checkpoints already exist, removing {len(removing_checkpoints)} checkpoints"

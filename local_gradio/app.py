@@ -69,7 +69,7 @@ def randomize_seed_fn(seed: int, randomize_seed: bool) -> int:
     return seed
 
 def save_image(img, profile: gr.OAuthProfile | None, metadata: dict, root_path='./'):
-    unique_name = str(uuid.uuid4()) + '.png'
+    unique_name = f'{str(uuid.uuid4())}.png'
     unique_name = os.path.join(root_path, unique_name)
     img.save(unique_name)
     # gr_user_history.save_image(label=metadata["prompt"], image=img, profile=profile, metadata=metadata)
